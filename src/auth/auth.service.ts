@@ -18,31 +18,43 @@ export class AuthService {
     const users = await this.prisma.user.findMany();
     return users.map(({ password, ...rest }) => rest);
   }
+async register(data: RegisterDto) {
+  const existing = await this.prisma.user.findUnique({
+    where: { email: data.email },
+  });
+  if (existing) throw new BadRequestException('Email already in use');
 
-  async register(data: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: data.email },
-    });
-    if (existing) throw new BadRequestException('Email already in use');
+  const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+  const role = this.validateRole(data.role);
 
-    const role = this.validateRole(data.role);
-const user = await this.prisma.user.create({
-  data: {
-    name: data.name,
-    email: data.email,
-    password: hashedPassword,
-    role,
-    staffPoints: Number(0),  // 👈 Required field
-    amount: new Prisma.Decimal(0),  // 👈 Required field for Decimal
-  },
-});
+  const user = await this.prisma.user.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      role,
+      staffPoints: 0,
+      amount: new Prisma.Decimal(0),
+    },
+  });
 
+  const { password, ...userData } = user;
 
-    const { password, ...userData } = user;
-    return { message: 'User registered successfully', user: userData };
-  }
+  // ✅ Generate token
+  const accessToken = this.jwtService.sign({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  return {
+    message: 'User registered successfully',
+    user: userData,
+    accessToken, // ✅ include token in response
+  };
+}
+
 
   async login(data: LoginDto) {
     const user = await this.prisma.user.findUnique({
