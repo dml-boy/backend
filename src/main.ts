@@ -35,7 +35,10 @@ async function bootstrap() {
     }),
   );
 
-  // ❌ CORS REMOVED
+app.enableCors({
+  origin: 'https://crudsems.vercel.app',
+  credentials: true,
+});
 
   app.use(passport.initialize());
   app.use(passport.session());
