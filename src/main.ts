@@ -28,7 +28,7 @@ async function bootstrap() {
   );
     // ✅ Enable CORS
   app.enableCors({
-    origin: 'http://localhost:3001', // frontend URL
+    origin: 'https://crudsems.vercel.app/', // frontend URL
     credentials: true, // if you're sending cookies
   });
 
