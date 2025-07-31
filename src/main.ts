@@ -3,15 +3,12 @@ import * as passport from 'passport';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import {
-  NestExpressApplication,
-} from '@nestjs/platform-express';
+import { NestExpressApplication } from '@nestjs/platform-express';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.set('trust proxy', 1); // ✅ now this works
-
-
 
   // 🧠 Swagger config
   const config = new DocumentBuilder()
@@ -38,11 +35,7 @@ async function bootstrap() {
     }),
   );
 
-  // 🔓 CORS setup for Vercel frontend
-  // app.enableCors({
-  //   origin: 'https://crudsems.vercel.app', // ✅ your frontend
-  //   credentials: true, // ✅ allow cookies to pass
-  // });
+  // ❌ CORS REMOVED
 
   app.use(passport.initialize());
   app.use(passport.session());
