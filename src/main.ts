@@ -39,10 +39,10 @@ async function bootstrap() {
   );
 
   // 🔓 CORS setup for Vercel frontend
-  app.enableCors({
-    origin: 'https://crudsems.vercel.app', // ✅ your frontend
-    credentials: true, // ✅ allow cookies to pass
-  });
+  // app.enableCors({
+  //   origin: 'https://crudsems.vercel.app', // ✅ your frontend
+  //   credentials: true, // ✅ allow cookies to pass
+  // });
 
   app.use(passport.initialize());
   app.use(passport.session());
