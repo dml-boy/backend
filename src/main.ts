@@ -1,37 +1,48 @@
-// main.ts
 import * as session from 'express-session';
 import * as passport from 'passport';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  NestExpressApplication,
+} from '@nestjs/platform-express';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
- const config = new DocumentBuilder()
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.set('trust proxy', 1); // ✅ now this works
+
+
+
+  // 🧠 Swagger config
+  const config = new DocumentBuilder()
     .setTitle('Dashboard API')
     .setDescription('Admin and Employee dashboard')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
+
+  // 🍪 Session config with secure cross-origin support
   app.use(
     session({
-      secret: 'keyboard-cat', // replace with env
+      secret: 'keyboard-cat', // store in env for production
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        maxAge: 1000 * 60 * 60, // 1 hour
+        maxAge: 1000 * 60 * 60,
+        secure: true,         // ✅ required for HTTPS on Render
+        sameSite: 'none',     // ✅ allow cross-origin cookies
       },
     }),
   );
-    // ✅ Enable CORS
-  app.enableCors({
-    origin: 'https://crudsems.vercel.app', // frontend URL
-    credentials: true, // if you're sending cookies
-  });
 
+  // 🔓 CORS setup for Vercel frontend
+  app.enableCors({
+    origin: 'https://crudsems.vercel.app', // ✅ your frontend
+    credentials: true, // ✅ allow cookies to pass
+  });
 
   app.use(passport.initialize());
   app.use(passport.session());
