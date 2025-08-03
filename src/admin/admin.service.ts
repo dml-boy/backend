@@ -4,7 +4,6 @@ import { PrismaService } from 'prisma/prisma.service';
 
 @Injectable()
 export class AdminService {
-  
   constructor(private readonly prisma: PrismaService) {}
 
   async getUsers(search = '', page = 1, limit = 10) {
@@ -71,36 +70,66 @@ export class AdminService {
           staffPoints: { increment: amount },
         },
       }),
-      
     ]);
 
     return { success: true, message: 'Points allocated successfully' };
   }
 
-async getAdminBalance(adminId: number): Promise<{ availablePoints: any; allocatedPoints: any }> {
-  const [admin, allocated] = await this.prisma.$transaction([
-    this.prisma.user.findUnique({
-      where: { id: adminId },
-      select: { staffPoints: true },
-    }),
-    this.prisma.transaction.aggregate({
-      where: { senderId: adminId },
-      _sum: { amount: true },
-    }),
-  ]);
+  async getAdminBalance(adminId: number): Promise<{ availablePoints: number; allocatedPoints: number }> {
+    const [admin, allocated] = await this.prisma.$transaction([
+      this.prisma.user.findUnique({
+        where: { id: adminId },
+        select: { staffPoints: true, amount: true, role: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: { senderId: adminId },
+        _sum: { amount: true },
+      }),
+    ]);
 
-  if (!admin) {
-    throw new NotFoundException('Admin not found');
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+
+    const availablePoints = admin.role === Role.ADMIN ? Number(admin.amount) : (admin.staffPoints ?? 0);
+
+    return {
+      availablePoints,
+      allocatedPoints: Number(allocated._sum.amount ?? 0),
+    };
   }
 
-  return {
-    availablePoints: admin.staffPoints,
-    allocatedPoints: allocated._sum.amount ?? 0,
-  };
-}
+  async initializeAdminPoints(adminId: number) {
+    const admin = await this.prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true, staffPoints: true, amount: true },
+    });
 
+    if (!admin || admin.role !== Role.ADMIN) {
+      throw new BadRequestException('Only admins can initialize points');
+    }
 
+    if (admin.staffPoints && admin.staffPoints >= Number(admin.amount)) {
+      throw new BadRequestException('Points already initialized');
+    }
 
+    const defaultAmount = admin.amount ?? 1000000000.0;
+
+    return this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: adminId },
+        data: { staffPoints: Number(defaultAmount) },
+      }),
+      this.prisma.transaction.create({
+        data: {
+          senderId: adminId,
+          recipientId: adminId,
+          amount: defaultAmount,
+          createdAt: new Date(),
+        },
+      }),
+    ]);
+  }
 
   async getAllTransactions(page = 1, limit = 10) {
     const skip = (page - 1) * limit;
@@ -148,7 +177,7 @@ async getAdminBalance(adminId: number): Promise<{ availablePoints: any; allocate
         email: true,
         createdAt: true,
         role: true,
-        staffPoints: true
+        staffPoints: true,
       },
     });
   }

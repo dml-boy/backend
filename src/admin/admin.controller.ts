@@ -2,8 +2,21 @@ import { Controller, Get, Post, Body, Query, UseGuards, Req, Logger } from '@nes
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/authenticated.guard';
 import { ParseIntPipe } from '@nestjs/common';
-import { IsInt, IsPositive } from 'class-validator';
-import { Prisma } from '@prisma/client';
+import { IsInt, IsPositive, IsOptional } from 'class-validator';
+
+// DTO for query parameters
+class QueryDto {
+  @IsOptional()
+  search?: string;
+
+  @IsInt()
+  @IsPositive()
+  page: number = 1;
+
+  @IsInt()
+  @IsPositive()
+  limit: number = 10;
+}
 
 // DTO for allocatePoints
 class AllocatePointsDto {
@@ -24,25 +37,20 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
-  async getUsers(
-    @Query('search') search?: string,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
-  ) {
-    this.logger.log(`Fetching users: search=${search}, page=${page}, limit=${limit}`);
-    return this.adminService.getUsers(search, page, limit);
+  async getUsers(@Query() query: QueryDto) {
+    this.logger.log({
+      message: 'Fetching users',
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+    });
+    return this.adminService.getUsers(query.search, query.page, query.limit);
   }
 
-@Get('admin/balance')
-async getAdminBalance(@Req() req) {
-  return this.adminService.getAdminBalance(req.user.id);
-}
-
-
-  @Get('admins')
-  async getAdmins() {
-    this.logger.log('Fetching admins (legacy endpoint)');
-    return this.adminService.getAdmins();
+  @Get('admin/balance')
+  async getAdminBalance(@Req() req) {
+    this.logger.log(`Fetching balance for admin: adminId=${req.user.id}`);
+    return this.adminService.getAdminBalance(req.user.id);
   }
 
   @Get('admin/all')
@@ -66,5 +74,9 @@ async getAdminBalance(@Req() req) {
     return this.adminService.allocatePoints(req.user.id, body.recipientId, body.amount);
   }
 
-//popo
+  @Post('admin/points/initialize')
+  async initializeAdminPoints(@Req() req) {
+    this.logger.log(`Initializing points for admin: adminId=${req.user.id}`);
+    return this.adminService.initializeAdminPoints(req.user.id);
+  }
 }
