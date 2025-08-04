@@ -6,7 +6,8 @@ import { PrismaService } from 'prisma/prisma.service';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getUsers(search = '', page = 1, limit = 10) {
+async getUsers(search = '', page = 1, limit = 10) {
+  try {
     const whereClause: any = {
       role: Role.EMPLOYEE,
     };
@@ -35,7 +36,11 @@ export class AdminService {
       })),
       total,
     };
+  } catch (error) {
+    console.error('getUsers error:', error);
+    throw new Error('Failed to fetch users');
   }
+}
 
   async allocatePoints(senderId: number, recipientId: number, amount: number) {
     if (!senderId || !recipientId) {
