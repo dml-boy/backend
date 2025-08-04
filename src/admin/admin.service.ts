@@ -8,6 +8,9 @@ export class AdminService {
 
 async getUsers(search = '', page = 1, limit = 10) {
   try {
+    const safePage = Number(page) || 1;
+    const safeLimit = Number(limit) || 10;
+
     const whereClause: any = {
       role: Role.EMPLOYEE,
     };
@@ -22,8 +25,8 @@ async getUsers(search = '', page = 1, limit = 10) {
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where: whereClause,
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (safePage - 1) * safeLimit,
+        take: safeLimit,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.user.count({ where: whereClause }),
@@ -41,6 +44,7 @@ async getUsers(search = '', page = 1, limit = 10) {
     throw new Error('Failed to fetch users');
   }
 }
+
 
   async allocatePoints(senderId: number, recipientId: number, amount: number) {
     if (!senderId || !recipientId) {
