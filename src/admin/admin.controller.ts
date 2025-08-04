@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req, Logger, InternalServerErrorException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/authenticated.guard';
 import { ParseIntPipe } from '@nestjs/common';
 import { IsInt, IsPositive, IsOptional } from 'class-validator';
-
 // DTO for query parameters
 class QueryDto {
   @IsOptional()
@@ -35,17 +34,24 @@ export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 
   constructor(private readonly adminService: AdminService) {}
-
-  @Get('users')
-  async getUsers(@Query() query: QueryDto) {
+@Get('users')
+async getUsers(@Query() query: QueryDto) {
+  try {
     this.logger.log({
       message: 'Fetching users',
       search: query.search,
       page: query.page,
       limit: query.limit,
     });
-    return this.adminService.getUsers(query.search, query.page, query.limit);
+
+    return await this.adminService.getUsers(query.search, query.page, query.limit);
+  } catch (error) {
+    this.logger.error('Error fetching users:', error.message);
+    this.logger.error(error.stack); // optional: log full stack
+    throw new InternalServerErrorException('Failed to fetch users'); // optional to hide internal details
   }
+}
+
 
   @Get('admin/balance')
   async getAdminBalance(@Req() req) {
